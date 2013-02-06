@@ -517,14 +517,9 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                 new_interval = 6 * DAY
             else:
                 if new_grade == 2 or new_grade == 3:
-                    if timing in ["ON TIME", "EARLY"]:
-                        new_interval = actual_interval * card.easiness
-                    else:
-                        # Learning late and interval was too long, so don't
-                        # increase the interval and use scheduled_interval
-                        # again as opposed to the much larger
-                        # actual_interval * card.easiness.
-                        new_interval = scheduled_interval
+                    reduced_interval = (int(float(actual_interval) /
+                                        float(card.easiness)))
+                    new_interval = min(scheduled_interval, reduced_interval)
                 if new_grade == 4:
                     new_interval = actual_interval * card.easiness
                 if new_grade == 5:
