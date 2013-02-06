@@ -513,7 +513,9 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                     card.easiness += 0.10
                 if card.easiness < 1.3:
                     card.easiness = 1.3
-            if card.ret_reps_since_lapse == 1:
+
+            # XXX: Just disable this bit since I don't get the point
+            if card.ret_reps_since_lapse == 1 and False:
                 new_interval = 6 * DAY
             else:
                 if new_grade == 2 or new_grade == 3:
