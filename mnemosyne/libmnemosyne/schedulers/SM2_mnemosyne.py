@@ -234,7 +234,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
             if self.config()["randomise_scheduled_cards"] == True:
                 sort_key = "random"
             else:
-                sort_key = "interval"
+                sort_key = "-interval"
             for _card_id, _fact_id in db.cards_due_for_ret_rep(\
                     self.adjusted_now(), sort_key=sort_key, limit=50):
                 self._card_ids_in_queue.append(_card_id)
