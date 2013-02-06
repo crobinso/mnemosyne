@@ -521,7 +521,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                                         float(card.easiness)))
                     new_interval = min(scheduled_interval, reduced_interval)
                 if new_grade == 4:
-                    new_interval = actual_interval * card.easiness
+                    new_interval = actual_interval
                 if new_grade == 5:
                     if timing in ["EARLY"]:
                         # Learning ahead and interval was too short. To avoid
