@@ -187,6 +187,7 @@ class SM2Mnemosyne(Scheduler):
         return (0, 0, 1*DAY, 3*DAY, 4*DAY, 7*DAY) [grade]
 
     def calculate_interval_noise(self, interval):
+        return 0
         if interval <= DAY:
             noise = 0
         elif interval <= 10 * DAY:
