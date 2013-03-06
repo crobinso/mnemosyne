@@ -567,6 +567,10 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         self.database().current_criterion().apply_to_card(card)
         for f in self.component_manager.all("hook", "after_repetition"):
             f.run(card)
+
+        # Cap max interval at 6 months
+        new_interval = min(60 * 60 * 24 * 180, new_interval)
+
         # Create log entry.
         self.log().repetition(card, scheduled_interval, actual_interval,
             thinking_time=self.stopwatch().time())
