@@ -571,6 +571,11 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         # Cap max interval at 6 months
         new_interval = min(60 * 60 * 24 * 180, new_interval)
 
+        # Cap interval increase at 30 days
+        diff_interval = min(new_interval - scheduled_interval,
+                            60 * 60 * 24 * 30)
+        new_interval = scheduled_interval + diff_interval
+
         # Create log entry.
         self.log().repetition(card, scheduled_interval, actual_interval,
             thinking_time=self.stopwatch().time())
