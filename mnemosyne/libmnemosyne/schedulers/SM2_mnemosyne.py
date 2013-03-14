@@ -167,7 +167,7 @@ class SM2Mnemosyne(Scheduler):
         next_rep = self.midnight_UTC(last_rep + new_interval)
         for card in cards:
             card.grade = grade
-            card.easiness = 2.5
+            card.easiness = 2.0
             card.acq_reps = 1
             card.acq_reps_since_lapse = 1
             card.last_rep = last_rep
@@ -453,6 +453,10 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                 timing = "EARLY"
             else:
                 timing = "ON TIME"
+
+        # Cap card easiness at 2 max
+        card.easiness = min(2, card.easiness)
+
         # Calculate the previously scheduled interval, i.e. the interval that
         # led up to this repetition.
         scheduled_interval = self.true_scheduled_interval(card)
@@ -466,7 +470,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
             actual_interval = int(self.stopwatch().start_time) - card.last_rep
         if card.grade == -1:
             # The card has not yet been given its initial grade.
-            card.easiness = 2.5
+            card.easiness = 2.0
             card.acq_reps = 1
             card.acq_reps_since_lapse = 1
             new_interval = self.calculate_initial_interval(new_grade)
@@ -539,6 +543,10 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                 # that actual_interval becomes 0.
                 if new_interval < DAY:
                     new_interval = DAY
+
+        # Cap card easiness at 2 max
+        card.easiness = min(2, card.easiness)
+
         # Allow plugins to modify new_interval by multiplying it.
         new_interval *= self.interval_multiplication_factor(card, new_interval)
         new_interval = int(new_interval)
