@@ -183,8 +183,7 @@ class SM2Mnemosyne(Scheduler):
         card before.
 
         """
-
-        return (0, 0, 1*DAY, 3*DAY, 4*DAY, 7*DAY) [grade]
+        return (0, 0, 1*DAY, 2*DAY, 3*DAY, 4*DAY)[grade]
 
     def calculate_interval_noise(self, interval):
         return 0
@@ -491,6 +490,9 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                  new_interval = random.choice([1, 2, 2]) * DAY
              elif new_grade == 5:
                  new_interval = 2 * DAY
+
+             new_interval = DAY
+
              # Make sure the second copy of a grade 0 card doesn't show
              # up again.
              if not dry_run and card.grade == 0:
@@ -504,6 +506,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
              card.acq_reps_since_lapse = 0
              card.ret_reps_since_lapse = 0
              new_interval = 0
+
         elif card.grade in [2, 3, 4, 5] and new_grade in [2, 3, 4, 5]:
             # In the retention phase and staying there.
             card.ret_reps += 1
