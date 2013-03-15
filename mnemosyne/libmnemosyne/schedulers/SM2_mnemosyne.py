@@ -524,8 +524,9 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                 new_interval = 6 * DAY
             else:
                 if new_grade == 2 or new_grade == 3:
+                    factor = new_grade == 2 and 3 or 2
                     reduced_interval = (int(float(actual_interval) /
-                                        float(card.easiness)))
+                                            float(factor)))
                     new_interval = min(scheduled_interval, reduced_interval)
                 if new_grade == 4:
                     new_interval = actual_interval
