@@ -183,7 +183,7 @@ class SM2Mnemosyne(Scheduler):
         card before.
 
         """
-        return (0, 0, 1*DAY, 2*DAY, 3*DAY, 4*DAY)[grade]
+        return (0, 0, 1*DAY, 1*DAY, 1*DAY, 2*DAY)[grade]
 
     def calculate_interval_noise(self, interval):
         return 0
