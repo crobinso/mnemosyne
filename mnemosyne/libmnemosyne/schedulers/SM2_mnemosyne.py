@@ -542,6 +542,11 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                         new_interval = scheduled_interval
                     else:
                         new_interval = actual_interval * card.easiness
+
+                    # Anytime a 5 is entered it should never be scheduled less
+                    # than 2 days out
+                    new_interval = max(new_interval, 2 * DAY)
+
                 # Pathological case which can occur when learning ahead a card
                 # in a single card database many times on the same day, such
                 # that actual_interval becomes 0.
