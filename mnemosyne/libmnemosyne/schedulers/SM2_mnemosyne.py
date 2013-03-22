@@ -631,35 +631,20 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         if now is None:
             now = self.adjusted_now()
         interval_days = (next_rep - now) / DAY
-        if interval_days >= 365:
-            interval_years = interval_days/365.
-            return _("in") + " " + "%.1f" % interval_years + " " + \
-                   _("years")
-        elif interval_days >= 62:
-            interval_months = int(interval_days/31)
-            return _("in") + " " + str(interval_months) + " " + \
-                   _("months")
-        elif interval_days >= 31:
-            return _("in 1 month")
-        elif interval_days >= 1:
-            return _("in") + " " + str(int(interval_days) + 1) + " " + \
+        if interval_days >= 1:
+            ret =  _("in") + " " + str(int(interval_days) + 1) + " " + \
                    _("days")
         elif interval_days >= 0:
-            return _("tomorrow")
+            ret = _("tomorrow")
         elif interval_days >= -1:
-            return _("today")
+            ret = _("today")
         elif interval_days >= -2:
-            return _("1 day overdue")
-        elif interval_days >= -31:
-            return str(int(-interval_days)) + " " + _("days overdue")
-        elif interval_days >= -62:
-            return _("1 month overdue")
-        elif interval_days >= -365:
-            interval_months = int(-interval_days/31)
-            return str(interval_months) + " " + _("months overdue")
+            ret = _("1 day overdue")
         else:
-            interval_years = -interval_days/365.
-            return "%.1f " % interval_years +  _("years overdue")
+            #interval_days >= -31:
+            ret = str(int(-interval_days) - 1) + " " + _("days overdue")
+
+        return ret
 
     def last_rep_to_interval_string(self, last_rep, now=None):
 
@@ -677,17 +662,11 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
             last_rep - self.config()["day_starts_at"] * HOUR)
         interval_days = (last_rep - now) / DAY
         if interval_days > -1:
-            return _("today")
+            ret = _("today")
         elif interval_days > -2:
-            return _("yesterday")
-        elif interval_days > -31:
-            return str(int(-interval_days)) + " " + _("days ago")
-        elif interval_days > -62:
-            return _("1 month ago")
-        elif interval_days > -365:
-            interval_months = int(-interval_days/31.)
-            return str(interval_months) + " " + _("months ago")
+            ret = _("yesterday")
         else:
-            interval_years = -interval_days/365.
-            return "%.1f " % interval_years +  _("years ago")
+            # interval_days > -31:
+            ret = str(int(-interval_days)) + " " + _("days ago")
 
+        return ret
