@@ -13,6 +13,8 @@ from mnemosyne.libmnemosyne.scheduler import Scheduler
 HOUR = 60 * 60 # Seconds in an hour.
 DAY = 24 * HOUR # Seconds in a day.
 
+HABIT_TAG = "MakeHabit::MakeHabit"
+LEARNED_HABIT_TAG = "MakeHabit::PreviouslyLearnedHabit"
 
 class SM2Mnemosyne(Scheduler):
 
@@ -595,6 +597,13 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         diff_interval = min(new_interval - scheduled_interval,
                             60 * 60 * 24 * 30)
         new_interval = scheduled_interval + diff_interval
+
+        # If card is a habit card, cap it to 14 days max
+        # If card is a learned habit, cap it to 28 days max
+        if HABIT_TAG in card.tag_string():
+            new_interval = min(new_interval, 14 * DAY)
+        elif LEARNED_HABIT_TAG in card.tag_string():
+            new_interval = min(new_interval, 28 * DAY)
 
         # Create log entry.
         self.log().repetition(card, scheduled_interval, actual_interval,
