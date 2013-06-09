@@ -564,31 +564,6 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         # Allow plugins to modify new_interval by multiplying it.
         new_interval *= self.interval_multiplication_factor(card, new_interval)
         new_interval = int(new_interval)
-        # When doing a dry run, stop here and return the scheduled interval.
-        if dry_run:
-            return new_interval
-        # Add some randomness to interval.
-        new_interval += self.calculate_interval_noise(new_interval)
-        # Update card properties. 'last_rep' is the time the card was graded,
-        # not when it was shown.
-        card.grade = new_grade
-        card.last_rep = int(time.time())
-        if new_grade >= 2:
-            card.next_rep = self.midnight_UTC(card.last_rep + new_interval)
-            self.avoid_sister_cards(card)
-        else:
-            card.next_rep = card.last_rep
-        # Warn if we learned a lot of new cards.
-        if len(self._fact_ids_memorised) == 15 and \
-            self.warned_about_too_many_cards == False:
-            self.main_widget().show_information(\
-        _("You've memorised 15 new or failed cards.") + " " +\
-        _("If you do this for many days, you could get a big workload later."))
-            self.warned_about_too_many_cards = True
-        # Run hooks.
-        self.database().current_criterion().apply_to_card(card)
-        for f in self.component_manager.all("hook", "after_repetition"):
-            f.run(card)
 
         # Cap max interval at 6 months
         new_interval = min(60 * 60 * 24 * 180, new_interval)
@@ -604,6 +579,35 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
             new_interval = min(new_interval, 14 * DAY)
         elif LEARNED_HABIT_TAG in card.tag_string():
             new_interval = min(new_interval, 28 * DAY)
+
+        # When doing a dry run, stop here and return the scheduled interval.
+        if dry_run:
+            return new_interval
+
+        # Add some randomness to interval.
+        new_interval += self.calculate_interval_noise(new_interval)
+
+        # Update card properties. 'last_rep' is the time the card was graded,
+        # not when it was shown.
+        card.grade = new_grade
+        card.last_rep = int(time.time())
+        if new_grade >= 2:
+            card.next_rep = self.midnight_UTC(card.last_rep + new_interval)
+            self.avoid_sister_cards(card)
+        else:
+            card.next_rep = card.last_rep
+
+        # Warn if we learned a lot of new cards.
+        if len(self._fact_ids_memorised) == 15 and \
+            self.warned_about_too_many_cards == False:
+            self.main_widget().show_information(\
+        _("You've memorised 15 new or failed cards.") + " " +\
+        _("If you do this for many days, you could get a big workload later."))
+            self.warned_about_too_many_cards = True
+        # Run hooks.
+        self.database().current_criterion().apply_to_card(card)
+        for f in self.component_manager.all("hook", "after_repetition"):
+            f.run(card)
 
         # Create log entry.
         self.log().repetition(card, scheduled_interval, actual_interval,
