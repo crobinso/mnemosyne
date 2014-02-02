@@ -575,10 +575,17 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
 
         # If card is a habit card, cap it to 14 days max
         # If card is a learned habit, cap it to 28 days max
+        # However, add some randomness to prevent them from bunching up
         if HABIT_TAG in card.tag_string():
-            new_interval = min(new_interval, 14 * DAY)
+            intmax = 14 * DAY
+            new_interval = min(new_interval, intmax)
+            if new_interval >= (intmax - DAY):
+                new_interval -= (random.choice(range(3)) * DAY)
         elif LEARNED_HABIT_TAG in card.tag_string():
-            new_interval = min(new_interval, 28 * DAY)
+            intmax = 28 * DAY
+            new_interval = min(new_interval, intmax)
+            if new_interval >= (intmax - DAY):
+                new_interval -= (random.choice(range(5)) * DAY)
 
         # When doing a dry run, stop here and return the scheduled interval.
         if dry_run:
