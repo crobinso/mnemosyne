@@ -20,8 +20,8 @@ GRADE_SAME = 3
 GRADE_MORE_SMALL = 4
 GRADE_MORE_BIG = 5
 
-HABIT_TAG = "MakeHabit::MakeHabit"
-LEARNED_HABIT_TAG = "MakeHabit::PreviouslyLearnedHabit"
+REMINDER_TAG_STUB = "Reminder::Reminder"
+
 
 class SM2Mnemosyne(Scheduler):
 
@@ -536,19 +536,17 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                             60 * 60 * 24 * 30)
         new_interval = scheduled_interval + diff_interval
 
-        # If card is a habit card, cap it to 14 days max
-        # If card is a learned habit, cap it to 28 days max
-        # However, add some randomness to prevent them from bunching up
-        if HABIT_TAG in card.tag_string():
-            intmax = 14 * DAY
+        # Cap it to the value specified by reminder tag
+        for tag in card.tag_string().split(", "):
+            if not tag.startswith(REMINDER_TAG_STUB):
+                continue
+
+            numdays = int(tag[len(REMINDER_TAG_STUB):])
+            intmax = numdays * DAY
             new_interval = min(new_interval, intmax)
             if new_interval >= (intmax - DAY):
-                new_interval -= (random.choice(range(3)) * DAY)
-        elif LEARNED_HABIT_TAG in card.tag_string():
-            intmax = 28 * DAY
-            new_interval = min(new_interval, intmax)
-            if new_interval >= (intmax - DAY):
-                new_interval -= (random.choice(range(5)) * DAY)
+                new_interval -= (
+                    random.choice(range(numdays / 6) or [0]) * DAY)
 
         # When doing a dry run, stop here and return the scheduled interval.
         if dry_run:
