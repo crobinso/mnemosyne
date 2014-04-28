@@ -1517,7 +1517,7 @@ _("Putting a database on a network drive is forbidden under Windows to avoid dat
         sort_key = self._process_sort_key(sort_key)
         return ((cursor[0], cursor[1]) for cursor in self.con.execute("""
             select _id, _fact_id from cards where
-            active=1 and grade>=2 and ?>=next_rep order by %s limit ?"""
+            active=1 and grade>=1 and ?>=next_rep order by %s limit ?"""
             % sort_key, (timestamp, limit)))
 
     def cards_to_relearn(self, grade, sort_key="", limit=-1):
@@ -1545,7 +1545,7 @@ _("Putting a database on a network drive is forbidden under Windows to avoid dat
         sort_key = self._process_sort_key(sort_key)
         return ((cursor[0], cursor[1]) for cursor in self.con.execute("""
             select _id, _fact_id from cards where
-            active=1 and grade>=2 and ?<next_rep order by %s limit ?"""
+            active=1 and grade>=1 and ?<next_rep order by %s limit ?"""
             % sort_key, (timestamp, limit)))
 
     def recently_memorised_count(self, max_ret_reps):
