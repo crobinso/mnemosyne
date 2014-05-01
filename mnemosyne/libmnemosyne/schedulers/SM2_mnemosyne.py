@@ -12,6 +12,8 @@ from mnemosyne.libmnemosyne.scheduler import Scheduler
 
 HOUR = 60 * 60 # Seconds in an hour.
 DAY = 24 * HOUR # Seconds in a day.
+MAX_INCREASE = 30 * DAY # At most increase interval by 30 days
+MAX_TOTAL = 360 * DAY # Cap out total interval at 360 days
 
 GRADE_FORGOT = 0
 GRADE_LESS_BIG = 1
@@ -528,12 +530,8 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
             if new_interval < DAY:
                 new_interval = DAY
 
-        # Cap max interval at 6 months
-        new_interval = min(60 * 60 * 24 * 180, new_interval)
-
-        # Cap interval increase at 30 days
-        diff_interval = min(new_interval - scheduled_interval,
-                            60 * 60 * 24 * 30)
+        new_interval = min(MAX_TOTAL, new_interval)
+        diff_interval = min(MAX_INCREASE, new_interval - scheduled_interval)
         new_interval = scheduled_interval + diff_interval
 
         # Cap it to the value specified by reminder tag
