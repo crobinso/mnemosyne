@@ -546,6 +546,12 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                 new_interval -= (
                     random.choice(range(numdays / 6) or [0]) * DAY)
 
+        # If the new interval is over 40 days, add some random noise to
+        # try and prevent cards from bunching up together over the long haul
+        if ((new_interval / DAY) >= 40 and
+            (new_grade == GRADE_MORE_SMALL or new_grade == GRADE_MORE_BIG)):
+            new_interval -= (DAY * random.choice(range(3)))
+
         # When doing a dry run, stop here and return the scheduled interval.
         if dry_run:
             return new_interval
