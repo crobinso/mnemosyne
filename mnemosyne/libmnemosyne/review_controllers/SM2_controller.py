@@ -4,6 +4,7 @@
 
 from mnemosyne.libmnemosyne.translator import _
 from mnemosyne.libmnemosyne.review_controller import ReviewController
+from mnemosyne.libmnemosyne.schedulers.SM2_mnemosyne import GRADE_FORGOT, GRADE_MORE_SMALL
 
 ACQ_PHASE = 0
 RET_PHASE = 1
@@ -17,28 +18,28 @@ class SM2Controller(ReviewController):
     tooltip[ACQ_PHASE][0] = \
         _("You don't remember this card yet.")
     tooltip[ACQ_PHASE][1] = \
-        _("Like '0', but it's getting more familiar. Show it less often.")
+        _("Show this card tomorrow")
     tooltip[ACQ_PHASE][2] = \
-        _("You've memorised this card now, and might remember it tomorrow.")
+        _("Show this card tomorrow")
     tooltip[ACQ_PHASE][3] = \
-        _("You've memorised this card now, and should remember it tomorrow.")
+        _("Show this card tomorrow")
     tooltip[ACQ_PHASE][4] = \
-        _("You've memorised this card now, and might remember it in 2 days.")
+        _("Show this card in 2 days")
     tooltip[ACQ_PHASE][5] = \
-        _("You've memorised this card now, and should remember it in 2 days.")
+        _("Show this card in 4 days")
 
     tooltip[RET_PHASE][0]  = \
         _("You've forgotten this card completely.")
     tooltip[RET_PHASE][1] = \
-        _("You've forgotten this card.")
+        _("Reduce the interval to one third of current")
     tooltip[RET_PHASE][2] = \
-        _("Barely correct answer. The interval was way too long.")
+        _("Reduce the interval to one half of current")
     tooltip[RET_PHASE][3] = \
-        _("Correct answer, but with much effort. The interval was probably too long.")
+        _("Keep the same interval")
     tooltip[RET_PHASE][4] = \
-        _("Correct answer, with some effort. The interval was probably just right.")
+        _("Double the current interval")
     tooltip[RET_PHASE][5] = \
-        _("Correct answer, but without any difficulties. The interval was probably too short.")
+        _("Triple the current interval")
 
     def reset(self, new_only=False):
         self.card = None
@@ -72,6 +73,21 @@ class SM2Controller(ReviewController):
         sch.rebuild_queue()
         self.reload_counters()
         self.update_status_bar_counters()
+        # XXX crobinso: After git merge, this was previously edited
+        # in 'Fix tooltips and 'forgot' tracking to match my scores' :
+        #
+        # If the card is scheduled (grade >=2) but no longer in the queue, we
+        # assume it disappeared e.g. because it was answered in a sync
+        # partner. Therefore, we show a new card.
+        # It could also have disappeared because the queue is limited in size
+        # and does not contain all scheduled cards. In this case, we will
+        # suboptimally 'abandon' the current card and it will be revisited
+        # later.
+        # if self.previous_card is None or not self.previous_card.active:
+        #    self.show_new_question()
+        # elif self.previous_card.grade > GRADE_FORGOT and \
+        #    not sch.is_in_queue(self.previous_card):
+        #    self.show_new_question()
         if self.previous_card is None or not self.previous_card.active:
             self.show_new_question()
         elif not sch.is_in_queue(self.previous_card):
@@ -183,11 +199,11 @@ _("You have finished your scheduled reviews. Now, learn as many failed or new ca
     def update_counters(self, previous_grade, new_grade):
         if self.scheduled_count is None:
             self.reload_counters()
-        if previous_grade >= 2 and not self.learning_ahead:
+        if previous_grade > GRADE_FORGOT and not self.learning_ahead:
             self.scheduled_count -= 1
-        if previous_grade >= 2 and new_grade <= 1:
+        if previous_grade > GRADE_FORGOT and new_grade <= GRADE_FORGOT:
             self.non_memorised_count += 1
-        if previous_grade <= 1 and new_grade >= 2:
+        if previous_grade <= GRADE_FORGOT and new_grade > GRADE_FORGOT:
             self.non_memorised_count -= 1
 
     def update_dialog(self, redraw_all=False):
@@ -266,7 +282,7 @@ _("You have finished your scheduled reviews. Now, learn as many failed or new ca
     def update_grades_area(self):
         w = self.review_widget()
         # Update grade buttons.
-        if self.card and self.card.grade < 2:
+        if self.card and self.card.grade <= GRADE_FORGOT:
             phase = ACQ_PHASE
             default_grade = 2
         else:
