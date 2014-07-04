@@ -426,19 +426,34 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
             import copy
             card = copy.copy(card)
 
-        # Determine whether we learned on time or not (only relevant for
-        # grades 2 or higher).
-        if self.adjusted_now() - DAY >= card.next_rep: # Already due yesterday.
-            timing = "LATE"
-        else:
-            if self.adjusted_now() < card.next_rep: # Not due today.
-                timing = "EARLY"
-            else:
-                timing = "ON TIME"
-
         # Calculate the previously scheduled interval, i.e. the interval that
         # led up to this repetition.
         scheduled_interval = self.true_scheduled_interval(card)
+
+        if card.grade == -1: # Unseen card.
+            actual_interval = 0
+        else:
+            actual_interval = int(self.stopwatch().start_time) - card.last_rep
+
+        # If we are grading early, don't allow actually increasing the
+        # card's interval, just rescheduling it using the interval it was
+        # already scheduled for.
+        #
+        # However we only use this logic if
+        # - We are actually learning ahead of time, AND one of:
+        #     - The card had a scheduled interval of under 14 days
+        #        OR
+        #     - The current interval is less than 80% of the scheduled
+        #       interval.
+        #
+        # The point of this logic is that we don't want to distort the
+        # the next interval too massively. And we skip increasing the interval
+        # for any really low cards.
+        is_early = False
+        if self.adjusted_now() < card.next_rep:
+            percent = float(actual_interval) / float(scheduled_interval)
+            if scheduled_interval < (14 * DAY) or percent < .8:
+                is_early = True
 
         # If we memorise a card, keep track of its fact, so that we can avoid
         # pulling a sister card from the 'unseen' pile.
@@ -446,11 +461,6 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
             card.grade == GRADE_FORGOT and
             new_grade != GRADE_FORGOT):
             self._fact_ids_memorised.append(card.fact._id)
-
-        if card.grade == -1: # Unseen card.
-            actual_interval = 0
-        else:
-            actual_interval = int(self.stopwatch().start_time) - card.last_rep
 
         if card.grade == -1:
             # The card has not yet been given its initial grade.
@@ -508,7 +518,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
             if new_grade == GRADE_SAME:
                 new_interval = actual_interval
             if new_grade == GRADE_MORE_SMALL or new_grade == GRADE_MORE_BIG:
-                if timing in ["EARLY"]:
+                if is_early:
                     # Learning ahead and interval was too short. To avoid
                     # that the intervals increase explosively when learning
                     # ahead, take scheduled_interval as opposed to the
@@ -520,9 +530,9 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                     factor = ((new_grade == GRADE_MORE_BIG) and 3 or 2)
                     new_interval = (actual_interval * factor)
 
-                # Anytime a 5 is entered it should never be scheduled less
-                # than 2 days out
-                new_interval = max(new_interval, 2 * DAY)
+                    # Anytime a 5 is entered it should never be scheduled less
+                    # than 2 days out
+                    new_interval = max(new_interval, 2 * DAY)
 
             # Pathological case which can occur when learning ahead a card
             # in a single card database many times on the same day, such
