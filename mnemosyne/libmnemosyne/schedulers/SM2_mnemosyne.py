@@ -450,7 +450,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         # the next interval too massively. And we skip increasing the interval
         # for any really low cards.
         is_early = False
-        if self.adjusted_now() < card.next_rep:
+        if self.adjusted_now() < card.next_rep and scheduled_interval != 0:
             percent = float(actual_interval) / float(scheduled_interval)
             if scheduled_interval < (14 * DAY) or percent < .8:
                 is_early = True
