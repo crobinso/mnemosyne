@@ -249,8 +249,11 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         limit = self.config()["non_memorised_cards_in_hand"]
         non_memorised_in_queue = 0
         if self.stage == 2:
+            # crobinso: sort by last_rep, means show the cards in the
+            # same order that we gave them GRADE_FORGOT
+            sort_key = "last_rep"
             for _card_id, _fact_id in db.cards_to_relearn(grade=GRADE_FORGOT,
-                sort_key="-interval"):
+                sort_key=sort_key):
                 if _fact_id not in self._fact_ids_in_queue:
                     if non_memorised_in_queue < limit:
                         self._card_ids_in_queue.append(_card_id)
@@ -259,7 +262,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                         non_memorised_in_queue += 1
                     if non_memorised_in_queue == limit:
                         break
-            random.shuffle(self._card_ids_in_queue)
+
             # Only stop when we reach the non memorised limit. Otherwise, keep
             # going to add some extra cards to get more spread.
             if non_memorised_in_queue == limit:
@@ -275,7 +278,8 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         # Use <= in the stage check, such that earlier stages can use
         # cards from this stage to increase the hand.
         if self.stage <= 3:
-            for _card_id, _fact_id in db.cards_new_memorising(grade=GRADE_FORGOT):
+            for _card_id, _fact_id in db.cards_new_memorising(
+                    grade=GRADE_FORGOT):
                 if _fact_id not in self._fact_ids_in_queue:
                     if non_memorised_in_queue < limit:
                         self._card_ids_in_queue.append(_card_id)
@@ -284,11 +288,12 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                         non_memorised_in_queue += 1
                     if non_memorised_in_queue == limit:
                         break
-            random.shuffle(self._card_ids_in_queue)
+
             # Only stop when we reach the grade 0 limit. Otherwise, keep
             # going to add some extra cards to get more spread.
             if non_memorised_in_queue == limit:
                 return
+
             # If the queue is empty, we can skip stage 3 in the future.
             if len(self._card_ids_in_queue) == 0:
                 self.stage = 4
@@ -303,6 +308,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                 sort_key = "random"
             else:
                 sort_key = ""
+
             # Preferentially keep away from sister cards for as long as
             # possible.
             for _card_id, _fact_id in db.cards_unseen(\
@@ -318,6 +324,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                         else:
                             self.stage = 3
                         return
+
             # If the queue is close to empty, start pulling in sister cards.
             if len(self._fact_ids_in_queue) <= 2:
                 for _card_id, _fact_id in db.cards_unseen(\
@@ -332,6 +339,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
                             else:
                                 self.stage = 3
                             return
+
             # If the queue is still empty, go to learn ahead of schedule.
             if len(self._card_ids_in_queue) == 0:
                 self.stage = 5
