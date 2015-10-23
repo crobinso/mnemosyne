@@ -215,6 +215,11 @@ class SM2Mnemosyne(Scheduler):
         self._card_ids_in_queue = []
         self._fact_ids_in_queue = []
 
+        # crobinso: We ignore these config options
+        # - self.config()["shown_backlog_help"]
+        # - self.config()["randomise_scheduled_cards"]
+        # - self.config()["non_memorised_cards_in_hand"]
+
         # Stage 1
         #
         # Do the cards that are scheduled for today (or are overdue), but
@@ -224,15 +229,7 @@ class SM2Mnemosyne(Scheduler):
         # Fetch maximum 50 cards at the same time, as a trade-off between
         # memory usage and redoing the query.
         if self.stage == 1:
-            if self.config()["shown_backlog_help"] == False:
-                if db.scheduled_count(self.adjusted_now() - DAY) != 0:
-                    self.main_widget().show_information(\
-_("You appear to have missed some reviews. Don't worry too much about this backlog, and do as many cards as you feel comfortable with to catch up each day. Mnemosyne will automatically reschedule your cards such that the most urgent ones are shown first."))
-                    self.config()["shown_backlog_help"] = True
-            if self.config()["randomise_scheduled_cards"] == True:
-                sort_key = "random"
-            else:
-                sort_key = "-interval"
+            sort_key = "-interval"
             for _card_id, _fact_id in db.cards_due_for_ret_rep(\
                     self.adjusted_now(), sort_key=sort_key, limit=50):
                 self._card_ids_in_queue.append(_card_id)
@@ -246,8 +243,8 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         # Now rememorise the cards that we got wrong during the last stage.
         # Concentrate on only a limited number of non memorised cards, in
         # order to avoid too long intervals between repetitions.
-        limit = self.config()["non_memorised_cards_in_hand"]
         non_memorised_in_queue = 0
+        limit = 50
         if self.stage == 2:
             # crobinso: sort by last_rep, means show the cards in the
             # same order that we gave them GRADE_FORGOT
@@ -304,15 +301,9 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         # Use <= in the stage check, such that earlier stages can use
         # cards from this stage to increase the hand.
         if self.stage <= 4:
-            if self.config()["randomise_new_cards"]:
-                sort_key = "random"
-            else:
-                sort_key = ""
-
             # Preferentially keep away from sister cards for as long as
             # possible.
-            for _card_id, _fact_id in db.cards_unseen(\
-                    sort_key=sort_key, limit=min(limit, 50)):
+            for _card_id, _fact_id in db.cards_unseen(limit=limit):
                 if _fact_id not in self._fact_ids_in_queue \
                     and _fact_id not in self._fact_ids_memorised:
                     self._card_ids_in_queue.append(_card_id)
@@ -327,8 +318,7 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
 
             # If the queue is close to empty, start pulling in sister cards.
             if len(self._fact_ids_in_queue) <= 2:
-                for _card_id, _fact_id in db.cards_unseen(\
-                        sort_key=sort_key, limit=min(limit, 50)):
+                for _card_id, _fact_id in db.cards_unseen(limit=limit):
                     if _fact_id not in self._fact_ids_in_queue:
                         self._card_ids_in_queue.append(_card_id)
                         self._fact_ids_in_queue.append(_fact_id)
