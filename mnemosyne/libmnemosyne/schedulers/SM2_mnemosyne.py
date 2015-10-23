@@ -348,9 +348,23 @@ class SM2Mnemosyne(Scheduler):
             else:
                 self.stage = 3
             return
-        for _card_id, _fact_id in db.cards_learn_ahead(self.adjusted_now(),
-                sort_key="next_rep", limit=50):
+
+        # crobinso: Here's the logic I altered for learn_ahead
+        #   - Only show cards that have a scheduled interval over 35 days
+        #   - Only show cards that will be scheduled in the next 7 days
+        #   - Order them with the largest interval first, like our dailies
+        #
+        # Most of this logic is reworked in SQLite.py cards_learn_ahead
+        # The idea is to only allow 'learning ahead' for stuff I likely
+        # already know (large interval). Stuff with a small interval really
+        # should only be done on the day it is due, otherwise I'm screwing
+        # with the system.
+        max_next_rep = (self.adjusted_now() + (DAY * 7))
+        max_last_rep = (self.adjusted_now() - (DAY * 35))
+        for _card_id, _fact_id in db.cards_learn_ahead(max_next_rep,
+                max_last_rep, sort_key="-interval"):
             self._card_ids_in_queue.append(_card_id)
+
         # Relearn cards which we got wrong during learn ahead.
         self.stage = 2
 
@@ -433,25 +447,11 @@ class SM2Mnemosyne(Scheduler):
         else:
             actual_interval = int(self.stopwatch().start_time) - card.last_rep
 
-        # If we are grading early, don't allow actually increasing the
-        # card's interval, just rescheduling it using the interval it was
-        # already scheduled for.
-        #
-        # However we only use this logic if
-        # - We are actually learning ahead of time, AND one of:
-        #     - The card had a scheduled interval of under 14 days
-        #        OR
-        #     - The current interval is less than 80% of the scheduled
-        #       interval.
-        #
-        # The point of this logic is that we don't want to distort the
-        # the next interval too massively. And we skip increasing the interval
-        # for any really low cards.
-        is_early = False
-        if self.adjusted_now() < card.next_rep and scheduled_interval != 0:
-            percent = float(actual_interval) / float(scheduled_interval)
-            if scheduled_interval < (14 * DAY) or percent < .8:
-                is_early = True
+        # crobinso: We don't need any special grade handling for
+        # learning ahead now, since we only schedule cards with large
+        # enough intervals that it's reasonable to grade them like normal.
+        # See the comment in rebuild_queue
+        # is_early = False
 
         # If we memorise a card, keep track of its fact, so that we can avoid
         # pulling a sister card from the 'unseen' pile.
@@ -516,21 +516,14 @@ class SM2Mnemosyne(Scheduler):
             if new_grade == GRADE_SAME:
                 new_interval = actual_interval
             if new_grade == GRADE_MORE_SMALL or new_grade == GRADE_MORE_BIG:
-                if is_early:
-                    # Learning ahead and interval was too short. To avoid
-                    # that the intervals increase explosively when learning
-                    # ahead, take scheduled_interval as opposed to the
-                    # much larger actual_interval * card.easiness.
-                    new_interval = scheduled_interval
-                else:
-                    # GRADE_MORE_BIG = multiply by 3
-                    # GRADE_MORE_SMALL = multiply by 2
-                    factor = ((new_grade == GRADE_MORE_BIG) and 3 or 2)
-                    new_interval = (actual_interval * factor)
+                # GRADE_MORE_BIG = multiply by 3
+                # GRADE_MORE_SMALL = multiply by 2
+                factor = ((new_grade == GRADE_MORE_BIG) and 3 or 2)
+                new_interval = (actual_interval * factor)
 
-                    # Anytime a 5 is entered it should never be scheduled less
-                    # than 2 days out
-                    new_interval = max(new_interval, 2 * DAY)
+                # Anytime a 5 is entered it should never be scheduled less
+                # than 2 days out
+                new_interval = max(new_interval, 2 * DAY)
 
             # Pathological case which can occur when learning ahead a card
             # in a single card database many times on the same day, such

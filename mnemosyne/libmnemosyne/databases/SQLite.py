@@ -1541,12 +1541,14 @@ _("Putting a database on a network drive is forbidden under Windows to avoid dat
             active=1 and grade=-1 order by %s limit ?"""
             % sort_key, (limit, )))
 
-    def cards_learn_ahead(self, timestamp, sort_key="", limit=-1):
+    def cards_learn_ahead(self, max_next_rep, max_last_rep,
+            sort_key="", limit=-1):
         sort_key = self._process_sort_key(sort_key)
         return ((cursor[0], cursor[1]) for cursor in self.con.execute("""
             select _id, _fact_id from cards where
-            active=1 and grade>=1 and ?<next_rep order by %s limit ?"""
-            % sort_key, (timestamp, limit)))
+            active=1 and grade>=1 and next_rep<=? and
+            last_rep<=? order by %s limit ?""" % sort_key,
+            (max_next_rep, max_last_rep, limit)))
 
     def recently_memorised_count(self, max_ret_reps):
         return self.con.execute("""select count() from cards where active=1
