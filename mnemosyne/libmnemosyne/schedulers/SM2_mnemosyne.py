@@ -585,7 +585,13 @@ class SM2Mnemosyne(Scheduler):
         return new_interval
 
     def scheduled_count(self):
-        return self.database().scheduled_count(self.adjusted_now())
+        # crobinso: Make it return a count of cards if we are 'learning ahead'
+        queue_count = 0
+        if hasattr(self, "_card_ids_in_queue"):
+            queue_count = len(self._card_ids_in_queue)
+
+        dbval = self.database().scheduled_count(self.adjusted_now())
+        return max(dbval, queue_count)
 
     def non_memorised_count(self):
         return self.database().non_memorised_count()

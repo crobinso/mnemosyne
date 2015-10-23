@@ -139,6 +139,7 @@ _("Use 'Learn ahead of schedule' sparingly. For cramming before an exam, it's mu
                 self.config()["warned_about_learning_ahead"] = True
             self.learning_ahead = True
             self.show_new_question()
+            self.reload_counters()
         else:
             self.stopwatch().stop()
             self._state = "SELECT GRADE"
@@ -199,7 +200,7 @@ _("You have finished your scheduled reviews. Now, learn as many failed or new ca
     def update_counters(self, previous_grade, new_grade):
         if self.scheduled_count is None:
             self.reload_counters()
-        if previous_grade > GRADE_FORGOT and not self.learning_ahead:
+        if previous_grade > GRADE_FORGOT:
             self.scheduled_count -= 1
         if previous_grade > GRADE_FORGOT and new_grade <= GRADE_FORGOT:
             self.non_memorised_count += 1
