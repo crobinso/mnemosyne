@@ -214,6 +214,7 @@ class SM2Mnemosyne(Scheduler):
             return
         self._card_ids_in_queue = []
         self._fact_ids_in_queue = []
+        self._in_learn_ahead = False
 
         # crobinso: We ignore these config options
         # - self.config()["shown_backlog_help"]
@@ -364,6 +365,7 @@ class SM2Mnemosyne(Scheduler):
         for _card_id, _fact_id in db.cards_learn_ahead(max_next_rep,
                 max_last_rep, sort_key="-interval"):
             self._card_ids_in_queue.append(_card_id)
+            self._in_learn_ahead = True
 
         # Relearn cards which we got wrong during learn ahead.
         self.stage = 2
@@ -587,8 +589,8 @@ class SM2Mnemosyne(Scheduler):
     def scheduled_count(self):
         # crobinso: Make it return a count of cards if we are 'learning ahead'
         queue_count = 0
-        if hasattr(self, "_card_ids_in_queue"):
-            queue_count = len(self._card_ids_in_queue)
+        if getattr(self, "_in_learn_ahead", False):
+            queue_count = len(self._card_ids_in_queue) + 1
 
         dbval = self.database().scheduled_count(self.adjusted_now())
         return max(dbval, queue_count)
