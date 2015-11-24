@@ -351,7 +351,7 @@ class SM2Mnemosyne(Scheduler):
             return
 
         # crobinso: Here's the logic I altered for learn_ahead
-        #   - Only show cards that have a scheduled interval over 35 days
+        #   - Only show cards that have a scheduled interval >= 34 days
         #   - Only show cards that will be scheduled in the next 7 days
         #   - Order them with the largest interval first, like our dailies
         #
@@ -361,9 +361,12 @@ class SM2Mnemosyne(Scheduler):
         # should only be done on the day it is due, otherwise I'm screwing
         # with the system.
         max_next_rep = (self.adjusted_now() + (DAY * 7))
-        max_last_rep = (self.adjusted_now() - (DAY * 35))
         for _card_id, _fact_id in db.cards_learn_ahead(max_next_rep,
-                max_last_rep, sort_key="-interval"):
+            sort_key="-interval"):
+            card = db.card(_card_id, is_id_internal=True)
+            if ((card.next_rep - card.last_rep) / DAY) < 34:
+                continue
+
             self._card_ids_in_queue.append(_card_id)
             self._in_learn_ahead = True
 
