@@ -648,6 +648,8 @@ class SM2Mnemosyne(Scheduler):
         """Converts next_rep to a string like 'yesterday', '2 weeks ago', ...
 
         """
+        if last_rep == -1:
+            return "Never"
 
         if now is None:
             now = time.time()
@@ -659,11 +661,10 @@ class SM2Mnemosyne(Scheduler):
             last_rep - self.config()["day_starts_at"] * HOUR)
         interval_days = (last_rep - now) / DAY
         if interval_days > -1:
-            ret = _("today")
+            ret = _("Today")
         elif interval_days > -2:
-            ret = _("yesterday")
+            ret = str(int(-interval_days)) + " " + _("day ago")
         else:
-            # interval_days > -31:
             ret = str(int(-interval_days)) + " " + _("days ago")
 
         return ret

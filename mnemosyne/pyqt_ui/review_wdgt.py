@@ -289,10 +289,12 @@ class ReviewWdgt(QtWidgets.QWidget, QAOptimalSplit, ReviewWidget, Ui_ReviewWdgt)
         self.setTabOrder(self.grade_5_button, self.grade_0_button)
         self.setTabOrder(self.grade_0_button, self.grade_1_button)
         self.focus_widget = None
+        self.lastrep = QtWidgets.QLabel("", parent.status_bar)
         self.sched = QtWidgets.QLabel("", parent.status_bar)
         self.notmem = QtWidgets.QLabel("", parent.status_bar)
         self.act = QtWidgets.QLabel("", parent.status_bar)
         parent.clear_status_bar()
+        parent.add_to_status_bar(self.sched, left_align=True)
         parent.add_to_status_bar(self.sched)
         parent.add_to_status_bar(self.notmem)
         parent.add_to_status_bar(self.act)
@@ -482,9 +484,10 @@ class ReviewWdgt(QtWidgets.QWidget, QAOptimalSplit, ReviewWidget, Ui_ReviewWdgt)
         self.grade_buttons.button(grade).setToolTip(text)
 
     def update_status_bar_counters(self):
-        scheduled_count, non_memorised_count, active_count = \
+        scheduled_count, non_memorised_count, active_count, last_rep = \
             self.review_controller().counters()
         self.sched.setText(_("Scheduled: %d ") % scheduled_count)
+        self.lastrep.setText("Last rep: %s " % last_rep)
         self.notmem.setText(_("Not memorised: %d ") % non_memorised_count)
         self.act.setText(_("Active: %d ") % active_count)
 

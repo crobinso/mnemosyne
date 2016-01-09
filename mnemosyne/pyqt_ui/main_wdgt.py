@@ -190,9 +190,12 @@ class MainWdgt(QtWidgets.QMainWindow, MainWidget, Ui_MainWdgt):
     def enable_browse_cards(self, is_enabled):
         self.actionBrowseCards.setEnabled(is_enabled)
 
-    def add_to_status_bar(self, widget):
+    def add_to_status_bar(self, widget, left_align=False):
         self.status_bar_widgets.append(widget)
-        self.status_bar.addPermanentWidget(widget)
+        if left_align:
+            self.status_bar.addWidget(widget)
+        else:
+            self.status_bar.addPermanentWidget(widget)
 
     def clear_status_bar(self):
         for widget in self.status_bar_widgets:

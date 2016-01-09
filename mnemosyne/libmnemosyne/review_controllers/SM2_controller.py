@@ -189,7 +189,16 @@ _("You have finished your scheduled reviews. Now, learn as many failed or new ca
     def counters(self):
         if self.non_memorised_count is None:
             self.reload_counters()
-        return self.scheduled_count, self.non_memorised_count, self.active_count
+
+        last_rep = ""
+        if self.card:
+            last_rep = self.scheduler().last_rep_to_interval_string(
+                self.card.last_rep)
+
+        return (self.scheduled_count,
+                self.non_memorised_count,
+                self.active_count,
+                last_rep)
 
     def reload_counters(self):
         sch = self.scheduler()
