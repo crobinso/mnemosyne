@@ -292,12 +292,12 @@ class ReviewWdgt(QtWidgets.QWidget, QAOptimalSplit, ReviewWidget, Ui_ReviewWdgt)
         self.lastrep = QtWidgets.QLabel("", parent.status_bar)
         self.sched = QtWidgets.QLabel("", parent.status_bar)
         self.notmem = QtWidgets.QLabel("", parent.status_bar)
-        self.act = QtWidgets.QLabel("", parent.status_bar)
+        #self.act = QtWidgets.QLabel("", parent.status_bar)
         parent.clear_status_bar()
         parent.add_to_status_bar(self.sched, left_align=True)
         parent.add_to_status_bar(self.sched)
         parent.add_to_status_bar(self.notmem)
-        parent.add_to_status_bar(self.act)
+        #parent.add_to_status_bar(self.act)
         parent.status_bar.setSizeGripEnabled(0)
         self.widget_with_last_selection = self.question
         self.question.selectionChanged.connect(self.selection_changed_in_q)
@@ -489,7 +489,7 @@ class ReviewWdgt(QtWidgets.QWidget, QAOptimalSplit, ReviewWidget, Ui_ReviewWdgt)
         self.sched.setText(_("Scheduled: %d ") % scheduled_count)
         self.lastrep.setText("Last rep: %s " % last_rep)
         self.notmem.setText(_("Not memorised: %d ") % non_memorised_count)
-        self.act.setText(_("Active: %d ") % active_count)
+        #self.act.setText(_("Active: %d ") % active_count)
 
     def play_media(self, filename, start=None, stop=None):
         if start is None:
