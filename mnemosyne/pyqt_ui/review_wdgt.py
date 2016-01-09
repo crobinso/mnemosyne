@@ -487,8 +487,12 @@ class ReviewWdgt(QtWidgets.QWidget, QAOptimalSplit, ReviewWidget, Ui_ReviewWdgt)
         scheduled_count, non_memorised_count, active_count, last_rep = \
             self.review_controller().counters()
         self.sched.setText(_("Scheduled: %d ") % scheduled_count)
-        self.lastrep.setText("Last rep: %s " % last_rep)
-        self.notmem.setText(_("Not memorised: %d ") % non_memorised_count)
+        self.lastrep.setText(" Last rep: %s" % last_rep)
+        if non_memorised_count > 0:
+            self.notmem.show()
+            self.notmem.setText(_("Not memorised: %d ") % non_memorised_count)
+        else:
+            self.notmem.hide()
         #self.act.setText(_("Active: %d ") % active_count)
 
     def play_media(self, filename, start=None, stop=None):
