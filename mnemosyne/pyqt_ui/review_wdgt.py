@@ -484,10 +484,10 @@ class ReviewWdgt(QtWidgets.QWidget, QAOptimalSplit, ReviewWidget, Ui_ReviewWdgt)
         self.grade_buttons.button(grade).setToolTip(text)
 
     def update_status_bar_counters(self):
-        scheduled_count, non_memorised_count, active_count, last_rep = \
-            self.review_controller().counters()
+        (scheduled_count, non_memorised_count, active_count,
+         last_rep, next_rep) = self.review_controller().counters()
         self.sched.setText(_("Scheduled: %d ") % scheduled_count)
-        self.lastrep.setText("Last rep: %s" % last_rep)
+        self.lastrep.setText("Last rep: %s%s" % (last_rep, next_rep))
         if non_memorised_count > 0:
             self.notmem.show()
             self.notmem.setText(_("Not memorised: %d ") % non_memorised_count)
