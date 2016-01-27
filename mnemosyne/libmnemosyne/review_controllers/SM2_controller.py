@@ -198,10 +198,11 @@ _("You have finished your scheduled reviews. Now, learn as many failed or new ca
             next_interval = (
                 (self.card.next_rep - self.scheduler().adjusted_now()) /
                 (24 * 60 * 60))
-            if next_interval < 0:
-                next_rep = (" (%s)" %
-                    self.scheduler().next_rep_to_interval_string(
-                    self.card.next_rep))
+            next_rep = (" (%s)" %
+                self.scheduler().next_rep_to_interval_string(
+                self.card.next_rep))
+            if "today" in next_rep:
+                next_rep = ""
 
         return (self.scheduled_count,
                 self.non_memorised_count,
