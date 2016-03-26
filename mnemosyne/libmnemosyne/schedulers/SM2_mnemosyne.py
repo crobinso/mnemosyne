@@ -539,6 +539,7 @@ class SM2Mnemosyne(Scheduler):
         new_interval = min(MAX_TOTAL, new_interval)
         diff_interval = min(MAX_INCREASE, new_interval - scheduled_interval)
         new_interval = scheduled_interval + diff_interval
+        add_noise = False
 
         # Cap it to the value specified by reminder tag
         for tag in card.tag_string().split(", "):
@@ -549,14 +550,16 @@ class SM2Mnemosyne(Scheduler):
             intmax = numdays * DAY
             new_interval = min(new_interval, intmax)
             if new_interval >= (intmax - DAY):
-                new_interval -= (
-                    random.choice(range(numdays / 6) or [0]) * DAY)
+                add_noise = True
 
         # If the new interval is over 40 days, add some random noise to
         # try and prevent cards from bunching up together over the long haul
         if ((new_interval / DAY) >= 40 and
-            (new_grade == GRADE_MORE_SMALL or new_grade == GRADE_MORE_BIG)):
-            new_interval -= (DAY * random.choice(range(3)))
+           (new_grade in [GRADE_SAME, GRADE_MORE_SMALL, GRADE_MORE_BIG])):
+            add_noise = True
+
+        if add_noise:
+            new_interval += (DAY * random.choice([-2, -1, 0, 1, 2]))
 
         # When doing a dry run, stop here and return the scheduled interval.
         if dry_run:
