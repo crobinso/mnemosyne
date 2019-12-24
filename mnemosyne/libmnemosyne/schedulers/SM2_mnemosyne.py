@@ -360,18 +360,26 @@ class SM2Mnemosyne(Scheduler):
         # already know (large interval). Stuff with a small interval really
         # should only be done on the day it is due, otherwise I'm screwing
         # with the system.
+        self._card_ids_in_queue = self._get_db_learn_ahead_queue()
+        if self._card_ids_in_queue:
+            self._in_learn_ahead = True
+
+        # Relearn cards which we got wrong during learn ahead.
+        self.stage = 2
+
+    def _get_db_learn_ahead_queue(self):
+        ret = []
+        db = self.database()
+
         max_next_rep = (self.adjusted_now() + (DAY * 7))
         for _card_id, _fact_id in db.cards_learn_ahead(max_next_rep,
             sort_key="-interval"):
             card = db.card(_card_id, is_id_internal=True)
             if ((card.next_rep - card.last_rep) / DAY) < 34:
                 continue
+            ret.append(_card_id)
 
-            self._card_ids_in_queue.append(_card_id)
-            self._in_learn_ahead = True
-
-        # Relearn cards which we got wrong during learn ahead.
-        self.stage = 2
+        return ret
 
     def is_in_queue(self, card):
         return card._id in self._card_ids_in_queue
@@ -594,12 +602,11 @@ class SM2Mnemosyne(Scheduler):
 
     def scheduled_count(self):
         # crobinso: Make it return a count of cards if we are 'learning ahead'
-        queue_count = 0
         if getattr(self, "_in_learn_ahead", False):
-            queue_count = len(self._card_ids_in_queue)
-
-        dbval = self.database().scheduled_count(self.adjusted_now())
-        return max(dbval, queue_count)
+            ret = len(self._get_db_learn_ahead_queue())
+        else:
+            ret = self.database().scheduled_count(self.adjusted_now())
+        return ret
 
     def non_memorised_count(self):
         return self.database().non_memorised_count()
