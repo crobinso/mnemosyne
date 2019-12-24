@@ -138,8 +138,9 @@ _("You have no more work for today. Either add more cards or come back tomorrow.
 _("Use 'Learn ahead of schedule' sparingly. For cramming before an exam, it's much better to use the cramming scheduler plugin"))
                 self.config()["warned_about_learning_ahead"] = True
             self.learning_ahead = True
-            self.show_new_question()
+            self.scheduler().rebuild_queue(self.learning_ahead)
             self.reload_counters()
+            self.show_new_question()
         else:
             self.stopwatch().stop()
             self._state = "SELECT GRADE"

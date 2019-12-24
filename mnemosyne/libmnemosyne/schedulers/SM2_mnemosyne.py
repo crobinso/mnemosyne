@@ -596,7 +596,7 @@ class SM2Mnemosyne(Scheduler):
         # crobinso: Make it return a count of cards if we are 'learning ahead'
         queue_count = 0
         if getattr(self, "_in_learn_ahead", False):
-            queue_count = len(self._card_ids_in_queue) + 1
+            queue_count = len(self._card_ids_in_queue)
 
         dbval = self.database().scheduled_count(self.adjusted_now())
         return max(dbval, queue_count)
