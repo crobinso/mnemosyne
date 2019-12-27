@@ -29,11 +29,13 @@ class SQLiteStatistics(object):
 
     def non_memorised_count(self):
         return self.con.execute("""select count() from cards
-            where active=1 and grade<2""").fetchone()[0]
+            where active=1 and grade<=%s""" %
+            self.scheduler().GRADE_FORGOT).fetchone()[0]
 
     def scheduled_count(self, timestamp):
         count = self.con.execute("""select count() from cards
-            where active=1 and grade>=2 and ?>=next_rep""",
+            where active=1 and grade>%s and ?>=next_rep""" %
+            self.scheduler().GRADE_FORGOT,
             (timestamp, )).fetchone()[0]
         return count
 
@@ -143,8 +145,9 @@ class SQLiteStatistics(object):
 
     def card_count_scheduled_between(self, start, stop):
         return self.con.execute(\
-            """select count() from cards where grade>=2
-            and ?<=next_rep and next_rep<? and active='1'""",
+            """select count() from cards where grade>%s
+            and ?<=next_rep and next_rep<? and active='1'""" %
+            self.scheduler().GRADE_FORGOT,
             (start, stop)).fetchone()[0]
 
     def start_of_day_n_days_ago(self, n):
@@ -214,7 +217,8 @@ class SQLiteStatistics(object):
         start_of_day = self.start_of_day_n_days_ago(n)
         return self.con.execute(\
             """select count() from log where ?<=timestamp and timestamp<?
-            and event_type=? and grade>=2 and ret_reps==0""",
+            and event_type=? and grade>%s and ret_reps==0""" %
+            self.scheduler().GRADE_FORGOT,
             (start_of_day, start_of_day + DAY, EventTypes.REPETITION)).\
             fetchone()[0]
 
@@ -229,7 +233,8 @@ class SQLiteStatistics(object):
             return 0
         scheduled_cards_correct = self.con.execute(\
             """select count() from log where ?<=timestamp and timestamp<?
-            and event_type=? and scheduled_interval!=0 and grade>=2""",
+            and event_type=? and scheduled_interval!=0 and grade>%s""" %
+            self.scheduler().GRADE_FORGOT,
             (start_of_day, start_of_day + DAY, EventTypes.REPETITION)).\
             fetchone()[0]
         return 100.0 * scheduled_cards_correct / scheduled_cards_seen

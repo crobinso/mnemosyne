@@ -19,6 +19,9 @@ class Scheduler(Component):
     name = ""
     component_type = "scheduler"
 
+    # The first grade that represents a 'forgotten' state
+    GRADE_FORGOT = 1
+
     def reset(self):
 
         """Called when starting the scheduler for the first time."""

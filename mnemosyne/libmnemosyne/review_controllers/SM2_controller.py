@@ -201,11 +201,14 @@ _("You have finished your scheduled reviews. Now, learn as many failed or new ca
     def update_counters(self, previous_grade, new_grade):
         if self.scheduled_count is None:
             self.reload_counters()
-        if previous_grade >= 2 and not self.learning_ahead:
+        if (previous_grade > self.scheduler().GRADE_FORGOT and
+            not self.learning_ahead):
             self.scheduled_count -= 1
-        if previous_grade >= 2 and new_grade <= 1:
+        if (previous_grade > self.scheduler().GRADE_FORGOT and
+            new_grade <= self.scheduler().GRADE_FORGOT):
             self.non_memorised_count += 1
-        if previous_grade <= 1 and new_grade >= 2:
+        if (previous_grade <= self.scheduler().GRADE_FORGOT and
+            new_grade > self.scheduler().GRADE_FORGOT):
             self.non_memorised_count -= 1
 
     def update_dialog(self, redraw_all=False):
@@ -284,7 +287,7 @@ _("You have finished your scheduled reviews. Now, learn as many failed or new ca
     def update_grades_area(self):
         w = self.review_widget()
         # Update grade buttons.
-        if self.card and self.card.grade < 2:
+        if self.card and self.card.grade <= self.scheduler().GRADE_FORGOT:
             phase = ACQ_PHASE
             default_grade = 2
         else:
