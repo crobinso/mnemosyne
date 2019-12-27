@@ -122,6 +122,8 @@ _("You have no more work for today. Either add more cards or come back tomorrow.
 _("Use 'Learn ahead of schedule' sparingly. For cramming before an exam, it's much better to use the cramming scheduler plugin"))
                 self.config()["warned_about_learning_ahead"] = True
             self.learning_ahead = True
+            self.scheduler().rebuild_queue(self.learning_ahead)
+            self.reload_counters()
             self.show_new_question()
         else:
             self.stopwatch().stop()
@@ -201,8 +203,7 @@ _("You have finished your scheduled reviews. Now, learn as many failed or new ca
     def update_counters(self, previous_grade, new_grade):
         if self.scheduled_count is None:
             self.reload_counters()
-        if (previous_grade > self.scheduler().GRADE_FORGOT and
-            not self.learning_ahead):
+        if previous_grade > self.scheduler().GRADE_FORGOT:
             self.scheduled_count -= 1
         if (previous_grade > self.scheduler().GRADE_FORGOT and
             new_grade <= self.scheduler().GRADE_FORGOT):

@@ -13,8 +13,7 @@ from mnemosyne.libmnemosyne.scheduler import Scheduler
 HOUR = 60 * 60  # Seconds in an hour.
 DAY = 24 * HOUR  # Seconds in a day.
 
-
-class SM2Mnemosyne(Scheduler):
+class OldSM2Mnemosyne(Scheduler):
 
     """Scheduler based on http://www.supermemo.com/english/ol/sm2.htm.
     Note that all intervals are in seconds, since time is stored as
@@ -32,7 +31,7 @@ class SM2Mnemosyne(Scheduler):
 
     """
 
-    name = "SM2 Mnemosyne"
+    name = "Old SM2 Mnemosyne"
     _warned_about_too_many_cards = False  # default false
 
     def true_scheduled_interval(self, card):
@@ -48,7 +47,7 @@ class SM2Mnemosyne(Scheduler):
         """
 
         interval = card.next_rep - card.last_rep
-        if card.grade < 2:
+        if card.grade <= self.GRADE_FORGOT:
             if abs(interval) > 1e-10:
                 self.main_widget().show_error(\
                     "Internal error: interval not zero.")
@@ -590,3 +589,296 @@ _("You appear to have missed some reviews. Don't worry too much about this backl
         start_of_day, end_of_day = self._today_start_and_end_timestamp()
 
         return self.database().has_already_warned_today(start_of_day, end_of_day)
+
+
+class SM2Mnemosyne(OldSM2Mnemosyne):
+    _MAX_INCREASE = 30 * DAY # At most increase interval by 30 days
+    _MAX_TOTAL = 360 * DAY # Cap out total interval at 360 days
+
+    _GRADE_FORGOT = 0
+    _GRADE_LESS_BIG = 1
+    _GRADE_LESS_SMALL = 2
+    _GRADE_SAME = 3
+    _GRADE_MORE_SMALL = 4
+    _GRADE_MORE_BIG = 5
+
+    _REMINDER_TAG_STUB = "Reminder::Reminder"
+
+    name = "Cole SM2 Mnemosyne"
+    GRADE_FORGOT = _GRADE_FORGOT
+
+    def calculate_interval_noise(self, interval):
+        # crobinso: We add our own noise elsewhere
+        return 0
+
+    def calculate_initial_interval(self, grade):
+        # crobinso: Adjusted for our custom grading
+        return (0, 1 * DAY, 1 * DAY, 1 * DAY, 2 * DAY, 4 * DAY)[grade]
+
+    def _get_db_learn_ahead_queue(self):
+        # crobinso: Here's the logic I altered for learn_ahead
+        #   - Only show cards that have a scheduled interval >= 34 days
+        #   - Only show cards that will be scheduled in the next 7 days
+        #   - Order them with the largest interval first, like our dailies
+        #
+        # The idea is to only allow 'learning ahead' for stuff I likely
+        # already know (large interval). Stuff with a small interval really
+        # should only be done on the day it is due, otherwise I'm screwing
+        # with the system.
+        ret = []
+        db = self.database()
+
+        max_next_rep = (self.adjusted_now() + (DAY * 7))
+        for _card_id, _fact_id in db.cards_learn_ahead(max_next_rep,
+            sort_key="-interval"):
+            card = db.card(_card_id, is_id_internal=True)
+            if ((card.next_rep - card.last_rep) / DAY) < 34:
+                continue
+            ret.append(_card_id)
+
+        return ret
+
+    def rebuild_queue(self, learn_ahead=False):
+        db = self.database()
+        if not db.is_loaded() or not db.active_count():
+            return
+        self._card_ids_in_queue = []
+
+        # crobinso: We ignore these config options
+        # - self.config()["shown_backlog_help"]
+        # - self.config()["randomise_scheduled_cards"]
+        # - self.config()["non_memorised_cards_in_hand"]
+
+        # crobinso: stage1 == regular card review. We sort by
+        # reverse interval, so the most well know cards come first and
+        # get harder as we review more. This is mentally nice for me.
+        # limit=XX is removed, I don't have enough cards that it matters
+        # for performance any.
+        if self.stage == 1:
+            sort_key = "-interval"
+            for _card_id, _fact_id in db.cards_due_for_ret_rep(
+                    self.adjusted_now(), sort_key=sort_key):
+                self._card_ids_in_queue.append(_card_id)
+            if len(self._card_ids_in_queue):
+                return
+            self.stage = 2
+
+        # crobinso: stages 2-4 are variations of unmemorized cards. We
+        # condense them into one stage 2. This drops all sister card
+        # handling. Implicitly sorts by when the card was added
+        if self.stage == 2:
+            for _card_id, _fact_id in db.cards_unmemorized():
+                self._card_ids_in_queue.append(_card_id)
+            if len(self._card_ids_in_queue):
+                return
+            self.stage = 3
+
+        # crobinso: new_only handling was dropped, I don't use it
+        # stage3 is learn_ahead=True, but only if the user requested it
+        if not learn_ahead:
+            return
+
+        self._card_ids_in_queue = self._get_db_learn_ahead_queue()
+        if self._card_ids_in_queue:
+            return
+
+        # Reset to the original stage, there's nothing to do
+        self.stage = 1
+
+    def _crobinso_interval_tweaks(self, card, new_interval, new_grade):
+        add_noise = False
+        # Cap it to the value specified by reminder tag
+        for tag in card.tag_string().split(", "):
+            if not tag.startswith(self._REMINDER_TAG_STUB):
+                continue
+
+            numdays = int(tag[len(self._REMINDER_TAG_STUB):])
+            intmax = numdays * DAY
+            new_interval = min(new_interval, intmax)
+            if new_interval >= (intmax - DAY):
+                add_noise = True
+
+        # crobinso: If the new interval is over 40 days, add some random noise to
+        # try and prevent cards from bunching up together over the long haul
+        if ((new_interval / DAY) >= 40 and
+           (new_grade in [self._GRADE_SAME, self._GRADE_MORE_SMALL, self._GRADE_MORE_BIG])):
+            add_noise = True
+
+        if add_noise:
+            new_interval += (DAY * random.choice([-2, -1, 0, 1, 2]))
+
+        return new_interval
+
+    def grade_answer(self, card, new_grade, dry_run=False):
+        # crobinso: dry_run handling is only used for showing the interval
+        # change in tooltips, which isn't necessary for me
+        if dry_run:
+            raise RuntimeError("dry_run=True not supported for %s" %
+                    self.__class__.__name__)
+
+        # from hooks running then.
+        for f in self.component_manager.all("hook", "before_repetition"):
+            f.run(card)
+
+        # Calculate the previously scheduled interval, i.e. the interval that
+        # led up to this repetition.
+        scheduled_interval = self.true_scheduled_interval(card)
+
+        if card.grade == -1:  # Unseen card.
+            actual_interval = 0
+        else:
+            actual_interval = int(self.stopwatch().start_time) - card.last_rep
+
+        # crobinso: We don't need any special grade handling for
+        # learning ahead now, since we only schedule cards with large
+        # enough intervals that it's reasonable to grade them like normal.
+        # See the comment in rebuild_queue
+
+        def FORGOT(g):
+            assert type(g) == int
+            return g <= self.GRADE_FORGOT
+
+        if card.grade == -1:
+            # The card has not yet been given its initial grade.
+            card.acq_reps = 1
+            card.acq_reps_since_lapse = 1
+            new_interval = self.calculate_initial_interval(new_grade)
+
+        elif FORGOT(card.grade) and FORGOT(new_grade):
+            # In the acquisition phase and staying there.
+            card.acq_reps += 1
+            card.acq_reps_since_lapse += 1
+            new_interval = 0
+
+        elif FORGOT(card.grade) and not FORGOT(new_grade):
+            # In the acquisition phase and moving to the retention phase.
+            card.acq_reps += 1
+            card.acq_reps_since_lapse += 1
+            if new_grade in [self._GRADE_LESS_BIG,
+                             self._GRADE_LESS_SMALL,
+                             self._GRADE_SAME]:
+                new_interval = DAY
+            elif new_grade == self._GRADE_MORE_SMALL:
+                new_interval = 2 * DAY
+            elif new_grade == self._GRADE_MORE_BIG:
+                new_interval = 4 * DAY
+
+        elif not FORGOT(card.grade) and FORGOT(new_grade):
+            # In the retention phase and dropping back to the
+            # acquisition phase.
+            card.ret_reps += 1
+            card.lapses += 1
+            card.acq_reps_since_lapse = 0
+            card.ret_reps_since_lapse = 0
+            new_interval = 0
+
+        elif not FORGOT(card.grade) and not FORGOT(new_grade):
+            # In the retention phase and staying there.
+            card.ret_reps += 1
+            card.ret_reps_since_lapse += 1
+
+            # crobinso: grade 1 or 2 means reduce the interval
+            if new_grade in [self._GRADE_LESS_SMALL, self._GRADE_LESS_BIG]:
+                # self._GRADE_LESS_BIG = divide by 3
+                # self._GRADE_LESS_SMALL = divide by 2
+                factor = ((new_grade == self._GRADE_LESS_BIG) and 3 or 2)
+                reduced_interval = (int(float(actual_interval) /
+                                        float(factor)))
+                new_interval = min(scheduled_interval, reduced_interval)
+                # If we shrunk the interval to less than 2.5 days, set it
+                # to a single day
+                if new_interval < 2.5 * DAY:
+                    new_interval = DAY
+
+            # crobinso: grade 3 means 'keep the interval the same'
+            if new_grade == self._GRADE_SAME:
+                new_interval = actual_interval
+
+            # crobinso: grade 4 or 5 means increase the interval
+            if (new_grade == self._GRADE_MORE_SMALL or
+                new_grade == self._GRADE_MORE_BIG):
+                # self._GRADE_MORE_BIG = multiply by 3
+                # self._GRADE_MORE_SMALL = multiply by 2
+                factor = ((new_grade == self._GRADE_MORE_BIG) and 3 or 2)
+                new_interval = (actual_interval * factor)
+
+                # Anytime a 5 is entered it should never be scheduled less
+                # than 2 days out
+                new_interval = max(new_interval, 2 * DAY)
+
+        new_interval = min(self._MAX_TOTAL, new_interval)
+        diff_interval = min(self._MAX_INCREASE,
+                new_interval - scheduled_interval)
+        new_interval = scheduled_interval + diff_interval
+
+        # crobinso: Add some custom interval tweaks
+        new_interval = self._crobinso_interval_tweaks(
+                card, new_interval, new_grade)
+
+        # Update card properties. 'last_rep' is the time the card was graded,
+        # not when it was shown.
+        card.grade = new_grade
+        card.last_rep = int(time.time())
+        card.next_rep = self.midnight_UTC(card.last_rep + new_interval)
+        if FORGOT(new_grade):
+            card.next_rep = card.last_rep
+
+        # Run hooks.
+        self.database().current_criterion().apply_to_card(card)
+        for f in self.component_manager.all("hook", "after_repetition"):
+            f.run(card)
+
+        # Create log entry.
+        self.log().repetition(card, scheduled_interval, actual_interval,
+            thinking_time=self.stopwatch().time())
+        return new_interval
+
+    def scheduled_count(self):
+        # crobinso: Make it return a count of cards if we are 'learning ahead'
+        if self.stage == 3:
+            return len(self._get_db_learn_ahead_queue())
+        return super().scheduled_count()
+
+    def next_rep_to_interval_string(self, next_rep, now=None):
+        # crobinso: simplified to just list days, not months etc.
+        if now is None:
+            now = self.adjusted_now()
+        interval_days = (next_rep - now) / DAY
+        if interval_days >= 1:
+            ret = (_("in") + " " + str(int(interval_days) + 1) + " " +
+                   _("days"))
+        elif interval_days >= 0:
+            ret = _("tomorrow")
+        elif interval_days >= -1:
+            ret = _("today")
+        elif interval_days >= -2:
+            ret = _("1 day overdue")
+        else:
+            #interval_days >= -31:
+            ret = str(int(-interval_days) - 1) + " " + _("days overdue")
+
+        return ret
+
+    def last_rep_to_interval_string(self, last_rep, now=None):
+        # crobinso: Altered to mostly give a single day count, not
+        #           prettifying with months etc.
+        if last_rep == -1:
+            return "Never"
+
+        if now is None:
+            now = time.time()
+        # To perform the calculation, we need to 'snap' the two timestamps
+        # to midnight UTC before calculating the interval.
+        now = self.midnight_UTC(
+            now - self.config()["day_starts_at"] * HOUR)
+        last_rep = self.midnight_UTC(
+            last_rep - self.config()["day_starts_at"] * HOUR)
+        interval_days = (last_rep - now) / DAY
+        if interval_days > -1:
+            ret = _("Today")
+        elif interval_days > -2:
+            ret = str(int(-interval_days)) + " " + _("day ago")
+        else:
+            ret = str(int(-interval_days)) + " " + _("days ago")
+
+        return ret

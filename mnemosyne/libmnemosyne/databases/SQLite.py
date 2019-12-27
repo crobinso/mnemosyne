@@ -1565,6 +1565,13 @@ _("Putting a database on a network drive is forbidden under Windows to avoid dat
             active=1 and grade=-1 order by %s limit ?"""
             % sort_key, (limit, )))
 
+    def cards_unmemorized(self, sort_key="", limit=-1):
+        sort_key = self._process_sort_key(sort_key)
+        return ((cursor[0], cursor[1]) for cursor in self.con.execute("""
+            select _id, _fact_id from cards where
+            active=1 and grade<=%s order by %s limit ?"""
+            % (self.scheduler().GRADE_FORGOT, sort_key), (limit, )))
+
     def cards_learn_ahead(self, max_next_rep, max_last_rep=0,
             sort_key="", limit=-1):
         sort_key = self._process_sort_key(sort_key)
